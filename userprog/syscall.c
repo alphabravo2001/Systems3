@@ -64,20 +64,6 @@ void sys_halt(void) {
 	shutdown_power_off();
 }
 
-int sys_write(int fd, const void*buffer, unsigned size) 
-{
-	if (!is_valid_user_address(buffer, size)) {
-		exit(-1);  // Terminate process for bad memory access
-	}
-
-	if (fd == 1)
-	{
-		putbuf(buffer, size);
-		return size;
-	}
-	return -1;	
-}
-
 static int sys_wait(tid_t child_tid) {
 	return process_wait(child_tid);
 }
@@ -91,6 +77,20 @@ void sys_exit(int status) {
   }
 
   thread_exit();
+}
+
+int sys_write(int fd, const void*buffer, unsigned size)
+{
+	if (!is_valid_user_address(buffer, size)) {
+		sys_exit(-1);  // Terminate process for bad memory access
+	}
+
+	if (fd == 1)
+	{
+		putbuf(buffer, size);
+		return size;
+	}
+	return -1;
 }
 
 bool sys_create(const char* filename, unsigned initial_size) {
