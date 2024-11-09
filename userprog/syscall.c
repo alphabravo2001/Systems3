@@ -34,6 +34,17 @@ get_user (const uint8_t *uaddr) {
   return result;
 }
 
+//verify pointer is valid and mapped
+bool is_valid_user_address(const void *buffer, unsigned size) {
+	for (unsigned i = 0; i < size; i++) {
+		const void *addr = (const char *)buffer + i;
+		if (addr == NULL || !is_user_vaddr(addr) || pagedir_get_page(thread_current()->pagedir, addr) == NULL) {
+			return false;
+		}
+	}
+	return true;
+}
+
 static int
 memread_user (void *src, void *dst, size_t bytes)
 {
@@ -55,6 +66,10 @@ void sys_halt(void) {
 
 int sys_write(int fd, const void*buffer, unsigned size) 
 {
+	if (!is_valid_user_address(buffer, size)) {
+		exit(-1);  // Terminate process for bad memory access
+	}
+
 	if (fd == 1)
 	{
 		putbuf(buffer, size);
