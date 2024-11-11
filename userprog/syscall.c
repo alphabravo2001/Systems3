@@ -27,7 +27,6 @@ get_user (const uint8_t *uaddr) {
     return -1;
   }
 
-  // as suggested in the reference manual, see (3.1.5)
   int result;
   asm ("movl $1f, %0; movzbl %1, %0; 1:"
       : "=&a" (result) : "m" (*uaddr));
@@ -106,6 +105,50 @@ bool sys_remove(const char* filename) {
 	return return_code;
 }
 
+int sys_open(const char *file) {
+	struct file* file_opened;
+	struct file_desc* fd = palloc_get_page(0);
+  if (!fd) {
+    return -1;
+  }
+
+  file_opened = filesys_open(file);
+  if (!file_opened) {
+    palloc_free_page (fd);
+    return -1;
+  }
+
+  fd->file = file_opened; //file save
+
+  // directory handling
+  struct inode *inode = file_get_inode(fd->file);
+  fd->dir = NULL;
+
+  struct list* fd_list = &thread_current()->file_descriptors;
+  if (list_empty(fd_list)) {
+    // 0, 1, 2 are reserved for stdin, stdout, stderr
+    fd->id = 3;
+  }
+  else {
+    fd->id = (list_entry(list_back(fd_list), struct file_desc, elem)->id) + 1;
+  }
+  list_push_back(fd_list, &(fd->elem));
+
+  return fd->id;
+
+}
+
+int sys_read(int fd, void *buffer, unsigned size) {
+  int ret = -1;
+    struct file_desc* file_d = find_file_desc(thread_current(), fd, FD_FILE);
+
+    if(file_d && file_d->file) {
+		ret = file_read(file_d->file, buffer, size);
+	}
+
+
+  return ret;
+}
 
 
 tid_t sys_exec(const char *cmd_line) {
@@ -143,6 +186,34 @@ syscall_handler(struct intr_frame *f)
       	NOT_REACHED();
       	break;
 	}
+
+    case SYS_READ:
+	{
+
+		int fd, return_code;
+      	void *buffer;
+      	unsigned size;
+
+      	memread_user(f->esp + 4, &fd, sizeof(fd));
+      	memread_user(f->esp + 8, &buffer, sizeof(buffer));
+      	memread_user(f->esp + 12, &size, sizeof(size));
+
+      	return_code = sys_read(fd, buffer, size);
+      	f->eax = (uint32_t) return_code;
+      	break;
+	}
+
+	case SYS_OPEN:
+    {
+      const char* filename;
+      int return_code;
+
+      memread_user(f->esp + 4, &filename, sizeof(filename));
+
+      return_code = sys_open(filename);
+      f->eax = return_code;
+      break;
+    }
 
 	case SYS_WRITE:
 	{
