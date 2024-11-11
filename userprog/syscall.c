@@ -162,6 +162,33 @@ tid_t sys_exec(const char *cmd_line) {
 	return process_execute(cmd_line);
 }
 
+static struct file_desc*
+find_file_desc(struct thread *t, int fd, enum fd_search_filter flag)
+{
+  if (fd < 3) {
+    return NULL;
+  }
+
+  struct list_elem *e;
+
+  if (! list_empty(&t->file_descriptors)) {
+    for(e = list_begin(&t->file_descriptors);
+        e != list_end(&t->file_descriptors); e = list_next(e))
+    {
+      struct file_desc *desc = list_entry(e, struct file_desc, elem);
+      if(desc->id == fd) {
+        // found. filter by flag to distinguish file and directorys
+        if (desc->dir != NULL && (flag & FD_DIRECTORY) )
+          return desc;
+        else if (desc->dir == NULL && (flag & FD_FILE) )
+          return desc;
+      }
+    }
+  }
+
+  return NULL; // not found
+}
+
 //int sys_wait(tid_t tid) {
 //	return process_wait(tid);
 //}
