@@ -12,7 +12,11 @@
 
 static void syscall_handler(struct intr_frame *);
 static int32_t get_user (const uint8_t *uaddr);
-static int memread_user (void *src, void *des, size_t bytes);
+static int memread_from_user (void *src, void *des, size_t bytes);
+
+enum fd_search_filter { FD_FILE = 1, FD_DIRECTORY = 2 };
+
+static struct file_desc* find_file_desc(struct thread *, int fd, enum fd_search_filter flag);
 
 void
 syscall_init(void)
@@ -21,7 +25,7 @@ syscall_init(void)
 }
 
 static int32_t
-get_user (const uint8_t *uaddr) {
+check_user (const uint8_t *uaddr) {
   // check that a user pointer `uaddr` points below PHYS_BASE
   if (! ((void*)uaddr < PHYS_BASE)) {
     return -1;
@@ -45,12 +49,12 @@ bool is_valid_user_address(const void *buffer, unsigned size) {
 }
 
 static int
-memread_user (void *src, void *dst, size_t bytes)
+memread_from_user (void *src, void *dst, size_t bytes)
 {
   int32_t value;
   size_t i;
   for(i=0; i<bytes; i++) {
-    value = get_user(src + i);
+    value = check_user(src + i);
     // if(value == -1) // segfault or invalid memory access
     //   fail_invalid_access();
 
@@ -180,7 +184,7 @@ syscall_handler(struct intr_frame *f)
 	case SYS_EXIT:
 	{
 		int exitcode;
-      	memread_user(f->esp + 4, &exitcode, sizeof(exitcode));
+      	memread_from_user(f->esp + 4, &exitcode, sizeof(exitcode));
 
       	sys_exit(exitcode);
       	NOT_REACHED();
@@ -194,9 +198,9 @@ syscall_handler(struct intr_frame *f)
       	void *buffer;
       	unsigned size;
 
-      	memread_user(f->esp + 4, &fd, sizeof(fd));
-      	memread_user(f->esp + 8, &buffer, sizeof(buffer));
-      	memread_user(f->esp + 12, &size, sizeof(size));
+      	memread_from_user(f->esp + 4, &fd, sizeof(fd));
+      	memread_from_user(f->esp + 8, &buffer, sizeof(buffer));
+      	memread_from_user(f->esp + 12, &size, sizeof(size));
 
       	return_code = sys_read(fd, buffer, size);
       	f->eax = (uint32_t) return_code;
@@ -208,7 +212,7 @@ syscall_handler(struct intr_frame *f)
       const char* filename;
       int return_code;
 
-      memread_user(f->esp + 4, &filename, sizeof(filename));
+      memread_from_user(f->esp + 4, &filename, sizeof(filename));
 
       return_code = sys_open(filename);
       f->eax = return_code;
@@ -231,8 +235,8 @@ syscall_handler(struct intr_frame *f)
       unsigned initial_size;
       bool return_code;
 
-      memread_user(f->esp + 4, &filename, sizeof(filename));
-      memread_user(f->esp + 8, &initial_size, sizeof(initial_size));
+      memread_from_user(f->esp + 4, &filename, sizeof(filename));
+      memread_from_user(f->esp + 8, &initial_size, sizeof(initial_size));
 
       return_code = sys_create(filename, initial_size);
       f->eax = return_code;
@@ -244,7 +248,7 @@ syscall_handler(struct intr_frame *f)
 		const char* filename;
 		bool return_code;
 
-		memread_user(f->esp + 4, &filename, sizeof(filename));
+		memread_from_user(f->esp + 4, &filename, sizeof(filename));
 
 		return_code = sys_remove(filename);
 		f->eax = return_code;
