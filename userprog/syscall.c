@@ -141,6 +141,7 @@ syscall_handler(struct intr_frame *f)
 {
 	uint32_t *esp = f->esp;
 
+    int syscall_number;
     memread_from_user(f->esp, &syscall_number, sizeof(syscall_number));
 
 	switch (*esp)
