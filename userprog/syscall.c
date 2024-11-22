@@ -68,7 +68,7 @@ memread_from_user(void *src, void *dst, size_t bytes)
         *(char *)(dst + i) = *(char *)(src + i); // Safely copy byte by byte
     }
 
-    return int(bytes); // Return success
+    return (int)bytes); // Return success
 }
 
 
@@ -130,7 +130,7 @@ syscall_handler(struct intr_frame *f)
         memread_from_user(f->esp + 4, &fd, sizeof(fd));
 
         ret = sys_filesize(fd);
-        f->eax = return_code;
+        f->eax = ret;
         break;
     }
 
@@ -209,7 +209,7 @@ syscall_handler(struct intr_frame *f)
      case SYS_SEEK: // 10
      {
          int fd;
-         unsigned pos;
+         unsigned position;
 
          memread_from_user(f->esp + 4, &fd, sizeof(fd));
          memread_from_user(f->esp + 8, &pos, sizeof(pos));
@@ -287,7 +287,7 @@ int sys_write(int fd, const void*buffer, unsigned size)
             ret = file_write(file_d->file, buffer, size);
         }
         else {
-            ret = -1     //inavalid file or no file desc
+            ret = -1;     //inavalid file or no file desc
         }
     }
 
@@ -313,7 +313,7 @@ bool sys_remove(const char* filename) {
     return ret;
 }
 
-int sys_open(const char *file) {
+int sys_open(const char *file_name) {
 
     // Validate user memory
     if (!is_valid_user_address(file_name, strlen(file_name) + 1)) {
@@ -339,10 +339,10 @@ int sys_open(const char *file) {
 
     // Initialize the file descriptor structure
     fd_entry->file = file;
-    fd_entry->fd = thread_current()->next_fd++;  // Assign the next available FD
+    fd_entry->id = thread_current()->max++;  // Assign the next available FD
 
     // Add the file descriptor to the current thread's list
-    list_push_back(&thread_current()->fd_list, &fd_entry->elem);
+    list_push_back(&thread_current()->file_descriptors, &fd_entry->elem);
 
     lock_release(&filesys_lock);
     return fd_entry->fd;
@@ -354,6 +354,7 @@ int sys_read(int fd, void *buffer, unsigned size) {
     if (!is_valid_user_address(buffer, size)) {
         sys_exit(-1); // Terminate the process for invalid memory access
     }
+    int ret;
 
     lock_acquire (&filesys_lock);
 
@@ -393,7 +394,7 @@ int sys_filesize(int fd) {
     //check for invalid fd
     if (file_d == NULL) {
         lock_release (&filesys_lock);
-        sys_exit(-1)
+        sys_exit(-1);
     }
 
     int ret = file_length(file_d->file);

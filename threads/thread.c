@@ -608,6 +608,8 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->child_list);
   list_init(&t->file_descriptors);
   t->executing_file = NULL;
+
+  t->max_fd = 2;  // max file descriptor value init
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
