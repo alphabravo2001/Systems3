@@ -212,7 +212,7 @@ syscall_handler(struct intr_frame *f)
          unsigned position;
 
          memread_from_user(f->esp + 4, &fd, sizeof(fd));
-         memread_from_user(f->esp + 8, &position, sizeof(pos));
+         memread_from_user(f->esp + 8, &position, sizeof(position));
 
          sys_seek(fd, position);
          break;
