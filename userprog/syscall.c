@@ -25,7 +25,7 @@ static struct file_desc* find_file_desc(struct thread *, int fd, enum fd_search_
 void sys_halt(void);
 void sys_exit(int status);
 tid_t sys_exec(const char *cmd_line);
-static int sys_wait(tid_t child_tid);
+int sys_wait(tid_t child_tid);
 bool sys_create(const char* filename, unsigned initial_size);
 bool sys_remove(const char* filename);
 int sys_open(const char *file);
@@ -70,12 +70,13 @@ check_user (const uint8_t *uaddr) {
         fail_invalid_access();
 }
 
-static int32_t
+ int32_t
 get_user (const uint8_t *uaddr) {
-    // check that a user pointer `uaddr` points below PHYS_BASE
-    if (! ((void*)uaddr < PHYS_BASE)) {
-        return -1;
-    }
+     // check that a user pointer `uaddr` points below PHYS_BASE
+     if (!((void *) uaddr < PHYS_BASE)) {
+         return -1;
+     }
+ }
 
 static int
 memread_from_user(void *src, void *dst, size_t bytes)
@@ -358,7 +359,6 @@ bool sys_remove(const char* filename) {
 
 int sys_open(const char *file_name) {
 
-}
     lock_acquire(&filesys_lock);
 
     // Attempt to open the file
