@@ -339,13 +339,13 @@ int sys_open(const char *file_name) {
 
     // Initialize the file descriptor structure
     fd_entry->file = file;
-    fd_entry->id = thread_current()->max++;  // Assign the next available FD
+    fd_entry->id = thread_current()->max_fd++;  // Assign the next available FD
 
     // Add the file descriptor to the current thread's list
     list_push_back(&thread_current()->file_descriptors, &fd_entry->elem);
 
     lock_release(&filesys_lock);
-    return fd_entry->fd;
+    return fd_entry->id;
 }
 
 int sys_read(int fd, void *buffer, unsigned size) {
