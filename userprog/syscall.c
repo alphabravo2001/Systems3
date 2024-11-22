@@ -25,7 +25,7 @@ static struct file_desc* find_file_desc(struct thread *, int fd, enum fd_search_
 void sys_halt(void);
 void sys_exit(int status);
 tid_t sys_exec(const char *cmd_line);
-int sys_wait(tid_t child_tid);
+static int sys_wait(tid_t child_tid);
 bool sys_create(const char* filename, unsigned initial_size);
 bool sys_remove(const char* filename);
 int sys_open(const char *file);
