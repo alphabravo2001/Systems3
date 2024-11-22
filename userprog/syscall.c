@@ -210,9 +210,9 @@ syscall_handler(struct intr_frame *f)
         unsigned size;
 
         /* Validate and extract arguments from user stack */
-        memread_user(f->esp + 4, &fd, sizeof(fd));
-        memread_user(f->esp + 8, &buffer, sizeof(buffer));
-        memread_user(f->esp + 12, &size, sizeof(size));
+        memread_from_user(f->esp + 4, &fd, sizeof(fd));
+        memread_from_user(f->esp + 8, &buffer, sizeof(buffer));
+        memread_from_user(f->esp + 12, &size, sizeof(size));
 
         /* Pass the arguments to the sys_write implementation */
         f->eax = sys_write(fd, buffer, size);
