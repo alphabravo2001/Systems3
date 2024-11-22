@@ -187,8 +187,7 @@ finish_step:
    been successfully called for the given TID, returns -1
    immediately, without waiting.
 
-   This function will be implemented in problem 2-2.  For now, it
-   does nothing. */
+   This function will be implemented in problem 2-2. */
 int
 process_wait (tid_t child_tid)
 {
