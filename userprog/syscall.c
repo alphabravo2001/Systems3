@@ -68,7 +68,7 @@ memread_from_user(void *src, void *dst, size_t bytes)
         *(char *)(dst + i) = *(char *)(src + i); // Safely copy byte by byte
     }
 
-    return (int)bytes); // Return success
+    return (int)bytes; // Return success
 }
 
 
@@ -212,7 +212,7 @@ syscall_handler(struct intr_frame *f)
          unsigned position;
 
          memread_from_user(f->esp + 4, &fd, sizeof(fd));
-         memread_from_user(f->esp + 8, &pos, sizeof(pos));
+         memread_from_user(f->esp + 8, &position, sizeof(pos));
 
          sys_seek(fd, position);
          break;
