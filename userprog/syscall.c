@@ -71,6 +71,21 @@ memread_from_user(void *src, void *dst, size_t bytes)
     return (int)bytes; // Return success
 }
 
+static bool
+put_user (uint8_t *udst, uint8_t byte) {
+    // check that a user pointer `udst` points below PHYS_BASE
+    if (! ((void*)udst < PHYS_BASE)) {
+        return false;
+    }
+
+    int error_code;
+
+    // as suggested in the reference manual, see (3.1.5)
+    asm ("movl $1f, %0; movb %b2, %1; 1:"
+            : "=&a" (error_code), "=m" (*udst) : "q" (byte));
+    return error_code != -1;
+}
+
 
 static struct file_desc*
 find_file_desc(struct thread *t, int fd, enum fd_search_filter flag)
@@ -413,7 +428,7 @@ tid_t sys_exec(const char *cmd_line) {
 
 void sys_seek(int fd, unsigned pos) {
 
-    lock_aquire(&filesys_lock);
+    lock_acquire(&filesys_lock);
     struct file_desc* file_d = find_file_desc(thread_current(), fd, FD_FILE);
 
     if(file_d && file_d->file) {
