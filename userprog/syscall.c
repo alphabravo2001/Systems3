@@ -80,18 +80,17 @@ get_user (const uint8_t *uaddr) {
 static int
 memread_from_user(void *src, void *dst, size_t bytes)
 {
-    // Validate the entire memory range before proceeding
-    if (!is_valid_user_address(src, bytes)) {
-        sys_exit(-1); // Terminate the process for invalid memory access
-    }
-
-    // Copy memory from user space to destination
+    int32_t value;
     size_t i;
-    for (i = 0; i < bytes; i++) {
-        *(char *)(dst + i) = *(char *)(src + i); // Safely copy byte by byte
+    for(i=0; i<bytes; i++) {
+        value = get_user(src + i);
+        if(value == -1) // segfault or invalid memory access
+            fail_invalid_access();
+
+        *(char*)(dst + i) = value & 0xff;
     }
 
-    return (int)bytes; // Return success
+    return (int)bytes;
 }
 
 static bool
