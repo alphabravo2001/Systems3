@@ -609,6 +609,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->file_descriptors);
   t->executing_file = NULL;
 
+  t->st_exit = UINT32_MAX;
   t->max_fd = 2;  // max file descriptor value init
 }
 

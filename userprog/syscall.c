@@ -44,7 +44,7 @@ syscall_init(void)
 }
 
 //verify pointer is valid and mapped
-bool is_valid_user_address(const void *buffer, unsigned size) {
+bool is_valid_user_address_(const void *buffer, unsigned size) {
 	for (unsigned i = 0; i < size; i++) {
 		const void *addr = (const char *)buffer + i;
 		if (addr == NULL || !is_user_vaddr(addr) || pagedir_get_page(thread_current()->pagedir, addr) == NULL) {
@@ -53,6 +53,29 @@ bool is_valid_user_address(const void *buffer, unsigned size) {
 	}
 	return true;
 }
+
+// in case of invalid memory access, fail and exit.
+static void fail_invalid_access(void) {
+    if (lock_held_by_current_thread(&filesys_lock))
+        lock_release (&filesys_lock);
+
+    sys_exit (-1);
+    NOT_REACHED();
+}
+
+static void
+check_user (const uint8_t *uaddr) {
+    // check uaddr range or segfaults
+    if(get_user (uaddr) == -1)
+        fail_invalid_access();
+}
+
+static int32_t
+get_user (const uint8_t *uaddr) {
+    // check that a user pointer `uaddr` points below PHYS_BASE
+    if (! ((void*)uaddr < PHYS_BASE)) {
+        return -1;
+    }
 
 static int
 memread_from_user(void *src, void *dst, size_t bytes)
@@ -119,6 +142,8 @@ syscall_handler(struct intr_frame *f)
 {
 	uint32_t *esp = f->esp;
 
+    memread_from_user(f->esp, &syscall_number, sizeof(syscall_number));
+
 	switch (*esp)
 	{
 
@@ -179,12 +204,17 @@ syscall_handler(struct intr_frame *f)
 
 	case SYS_WRITE:
 	{
-		int fd = *(esp + 1);
-		const void *buffer = (const void *)*(esp + 2);
-		unsigned size = *(esp + 3);
-		f->eax = sys_write(fd, buffer, size);
-		break;
+        int fd;
+        const void *buffer;
+        unsigned size;
 
+        /* Validate and extract arguments from user stack */
+        memread_user(f->esp + 4, &fd, sizeof(fd));
+        memread_user(f->esp + 8, &buffer, sizeof(buffer));
+        memread_user(f->esp + 12, &size, sizeof(size));
+
+        /* Pass the arguments to the sys_write implementation */
+        f->eax = sys_write(fd, buffer, size);
 	}
 
 	case SYS_CREATE:
@@ -283,9 +313,7 @@ void sys_exit(int status) {
 
 int sys_write(int fd, const void*buffer, unsigned size)
 {
-    if (!is_valid_user_address(buffer, size)) {
-        sys_exit(-1);  // Terminate process for bad memory access
-    }
+
     int ret;
     lock_acquire(&filesys_lock);
 
@@ -293,7 +321,7 @@ int sys_write(int fd, const void*buffer, unsigned size)
     if (fd == 1)
     {
         putbuf(buffer, size);
-        ret = size;
+        return size;
     }
     //writing to file
     else{
@@ -330,18 +358,14 @@ bool sys_remove(const char* filename) {
 
 int sys_open(const char *file_name) {
 
-    // Validate user memory
-    if (!is_valid_user_address(file_name, strlen(file_name) + 1)) {
-        sys_exit(-1);  // Terminate process for invalid pointer
-    }
-
+}
     lock_acquire(&filesys_lock);
 
     // Attempt to open the file
     struct file *file = filesys_open(file_name);
     if (file == NULL) {
         lock_release(&filesys_lock);
-        sys_exit(-1);   // File could not be opened
+        return -1;   // File could not be opened
     }
 
     // Allocate memory for a file descriptor structure
@@ -365,10 +389,6 @@ int sys_open(const char *file_name) {
 
 int sys_read(int fd, void *buffer, unsigned size) {
 
-    // Validate user memory
-    if (!is_valid_user_address(buffer, size)) {
-        sys_exit(-1); // Terminate the process for invalid memory access
-    }
     int ret;
 
     lock_acquire (&filesys_lock);

@@ -118,6 +118,8 @@ struct thread
                                            A page fault might occur in the kernel, so we might
                                            need to store esp on transition to kernel mode. (4.3.3) */
 
+    int st_exit;                        /* Exit status */
+
     int max_fd;  /* max FD count for file descriptors */
 
 
